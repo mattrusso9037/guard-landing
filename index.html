@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guard — An AI that protects your energy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-primary: #07091A;
+      --bg-secondary: #0C1020;
+      --bg-card: #111827;
+      --accent-violet: #8B5CF6;
+      --accent-violet-light: #A78BFA;
+      --accent-teal: #2DD4BF;
+      --text-primary: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #475569;
+      --border: rgba(148,163,184,0.1);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Radar rings */
+    @keyframes radarRing {
+      0%   { transform: scale(0.5); opacity: 0.7; }
+      100% { transform: scale(4);   opacity: 0; }
+    }
+    .radar-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(139,92,246,0.35);
+      width: 80px; height: 80px;
+      top: 50%; left: 50%;
+      margin: -40px 0 0 -40px;
+      animation: radarRing 4.5s ease-out infinite;
+    }
+    .radar-ring:nth-child(2) { animation-delay: 1.5s; }
+    .radar-ring:nth-child(3) { animation-delay: 3s; }
+
+    /* Waveform */
+    @keyframes wave1 { 0%,100%{height:6px}  50%{height:28px} }
+    @keyframes wave2 { 0%,100%{height:12px} 50%{height:44px} }
+    @keyframes wave3 { 0%,100%{height:5px}  50%{height:52px} }
+    @keyframes wave4 { 0%,100%{height:18px} 50%{height:36px} }
+    @keyframes wave5 { 0%,100%{height:10px} 50%{height:56px} }
+    .wave-bar {
+      width: 3px;
+      background: rgba(139,92,246,0.55);
+      border-radius: 2px;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+    }
+    .wave-bar:nth-child(1)  { animation: wave1 1.2s infinite 0.0s; }
+    .wave-bar:nth-child(2)  { animation: wave3 1.4s infinite 0.1s; }
+    .wave-bar:nth-child(3)  { animation: wave2 1.1s infinite 0.2s; }
+    .wave-bar:nth-child(4)  { animation: wave5 1.5s infinite 0.3s; }
+    .wave-bar:nth-child(5)  { animation: wave4 1.3s infinite 0.4s; }
+    .wave-bar:nth-child(6)  { animation: wave2 1.2s infinite 0.5s; }
+    .wave-bar:nth-child(7)  { animation: wave3 1.4s infinite 0.6s; }
+    .wave-bar:nth-child(8)  { animation: wave1 1.1s infinite 0.7s; }
+    .wave-bar:nth-child(9)  { animation: wave5 1.3s infinite 0.8s; }
+    .wave-bar:nth-child(10) { animation: wave4 1.5s infinite 0.9s; }
+    .wave-bar:nth-child(11) { animation: wave1 1.2s infinite 1.0s; }
+    .wave-bar:nth-child(12) { animation: wave2 1.4s infinite 1.1s; }
+
+    /* Scroll fade-in */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .fade-in.delay-1 { transition-delay: 0.1s; }
+    .fade-in.delay-2 { transition-delay: 0.2s; }
+    .fade-in.delay-3 { transition-delay: 0.3s; }
+
+    /* Card hover */
+    .card-hover { transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease; }
+    .card-hover:hover { border-color: rgba(139,92,246,0.3) !important; background-color: rgba(139,92,246,0.05) !important; transform: translateY(-2px); }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+      border: 1px solid rgba(167,139,250,0.3);
+      box-shadow: 0 0 20px rgba(139,92,246,0.2);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+      box-shadow: 0 0 32px rgba(139,92,246,0.4);
+      transform: translateY(-1px);
+    }
+    .btn-primary:focus-visible {
+      outline: 2px solid #A78BFA;
+      outline-offset: 2px;
+    }
+    .btn-secondary {
+      border: 1px solid rgba(148,163,184,0.2);
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+    .btn-secondary:hover {
+      border-color: rgba(139,92,246,0.4);
+      color: var(--text-primary);
+      background: rgba(139,92,246,0.05);
+    }
+    .btn-secondary:focus-visible {
+      outline: 2px solid #A78BFA;
+      outline-offset: 2px;
+    }
+
+    /* Gradient text */
+    .text-gradient {
+      background: linear-gradient(135deg, #A78BFA, #2DD4BF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Step number */
+    .step-number {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(139,92,246,0.3);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Divider */
+    .section-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(148,163,184,0.1), transparent); }
+
+    /* Input focus */
+    input:focus { outline: none; border-color: rgba(139,92,246,0.5) !important; box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.25); border-radius: 3px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .radar-ring, .wave-bar { animation: none; }
+      .fade-in { opacity: 1; transform: none; transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<nav class="fixed top-0 left-0 right-0 z-50 px-6 py-4" style="background: linear-gradient(to bottom, rgba(7,9,26,0.95) 0%, rgba(7,9,26,0) 100%); backdrop-filter: blur(16px);">
+  <div class="max-w-6xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #7C3AED, #2DD4BF);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+          <circle cx="12" cy="12" r="4" fill="white"/>
+        </svg>
+      </div>
+      <span class="font-semibold text-sm" style="color: var(--text-primary);">Guard</span>
+    </div>
+    <a href="#early-access" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white cursor-pointer">
+      Get early access
+    </a>
+  </div>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 pb-16 px-6">
+  <!-- Glow orbs -->
+  <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+    <div class="absolute" style="top:30%;left:50%;transform:translate(-50%,-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(139,92,246,0.1) 0%,transparent 65%);"></div>
+    <div class="absolute" style="top:65%;right:20%;width:400px;height:400px;background:radial-gradient(circle,rgba(45,212,191,0.06) 0%,transparent 65%);"></div>
+  </div>
+
+  <!-- Radar -->
+  <div class="absolute pointer-events-none" aria-hidden="true" style="top:38%;left:50%;transform:translate(-50%,-50%);">
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+  </div>
+
+  <div class="relative z-10 max-w-4xl mx-auto text-center">
+    <!-- Badge -->
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-8 fade-in" style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);color:#A78BFA;">
+      <span class="w-1.5 h-1.5 rounded-full" style="background:#A78BFA;animation:pulse 2s ease-in-out infinite;"></span>
+      Early access — limited spots
+    </div>
+
+    <!-- Headline -->
+    <h1 class="font-bold leading-tight mb-6 fade-in delay-1" style="font-size:clamp(2.4rem,6vw,4.25rem);letter-spacing:-0.03em;color:var(--text-primary);">
+      An AI that protects<br>
+      <span class="text-gradient">your energy</span> by handling<br>
+      social overload for you.
+    </h1>
+
+    <!-- Subheadline -->
+    <p class="text-lg sm:text-xl max-w-2xl mx-auto mb-4 leading-relaxed fade-in delay-2" style="color:var(--text-secondary);">
+      It monitors your calendar, predicts burnout before it happens, and takes small actions on your behalf — all through short, audio-first check-ins.
+    </p>
+
+    <!-- Differentiator -->
+    <p class="text-xs font-semibold uppercase tracking-widest mb-10 fade-in delay-3" style="color:var(--text-muted);letter-spacing:0.1em;">
+      Not a chatbot. Not a planner. An action-taking AI agent with context and authority.
+    </p>
+
+    <!-- CTAs -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 fade-in delay-3">
+      <a href="#early-access" class="btn-primary px-6 py-3.5 rounded-xl text-base font-semibold text-white cursor-pointer w-full sm:w-auto text-center">
+        Get early access
+      </a>
+      <a href="#how-it-works" class="btn-secondary px-6 py-3.5 rounded-xl text-base font-medium cursor-pointer w-full sm:w-auto text-center">
+        See how it works
+      </a>
+    </div>
+
+    <!-- Waveform indicator -->
+    <div class="mt-12 flex items-center justify-center gap-3 fade-in" aria-hidden="true">
+      <div class="flex items-end gap-1" style="height:48px;">
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      </div>
+      <span class="text-xs" style="color:var(--text-muted);">Audio-first</span>
+    </div>
+
+  </div>
+
+  <!-- Scroll hint -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2" aria-hidden="true">
+    <div class="w-5 h-8 rounded-full border flex items-start justify-center pt-1.5" style="border-color:var(--text-muted);">
+      <div class="w-1 h-2 rounded-full" style="background:var(--text-muted);animation:bounce 1.8s ease-in-out infinite;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PROBLEM ===================== -->
+<section class="py-24 px-6">
+  <div class="section-divider mb-24"></div>
+  <div class="max-w-4xl mx-auto">
+    <div class="fade-in">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">The problem</p>
+      <h2 class="font-bold leading-tight mb-14" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+        Social burnout doesn't happen<br>all at once.
+        <span class="text-gradient"> It sneaks up on you.</span>
+      </h2>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-px fade-in" style="background:var(--border);">
+      <!-- Item 1 -->
+      <div class="p-6" style="background:var(--bg-primary);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20M2 12h20" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">You say yes when you shouldn't</p>
+        <p class="text-xs leading-relaxed" style="color:var(--text-secondary);">And you only realize it after you're already committed.</p>
+      </div>
+      <!-- Item 2 -->
+      <div class="p-6" style="background:var(--bg-primary);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#EF4444" stroke-width="2"/><path d="M12 7v5l3 3" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Too much, too late</p>
+        <p class="text-xs leading-relaxed" style="color:var(--text-secondary);">You realize it's overwhelming when the damage is already done.</p>
+      </div>
+      <!-- Item 3 -->
+      <div class="p-6" style="background:var(--bg-primary);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">You cancel last minute</p>
+        <p class="text-xs leading-relaxed" style="color:var(--text-secondary);">And feel guilty for days afterward.</p>
+      </div>
+      <!-- Item 4 -->
+      <div class="p-6" style="background:var(--bg-primary);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="7" r="4" stroke="#EF4444" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">You withdraw from relationships</p>
+        <p class="text-xs leading-relaxed" style="color:var(--text-secondary);">Not because you want to — because you're depleted.</p>
+      </div>
+      <!-- Item 5 -->
+      <div class="p-6" style="background:var(--bg-primary);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">You're tired of managing it manually</p>
+        <p class="text-xs leading-relaxed" style="color:var(--text-secondary);">Tracking what you can handle is exhausting in itself.</p>
+      </div>
+      <!-- Anchor sentence -->
+      <div class="p-6 flex items-center" style="background:var(--bg-primary);">
+        <p class="text-sm leading-relaxed" style="color:var(--text-secondary);">
+          Most people don't need better advice.<br>
+          <span class="font-semibold" style="color:var(--text-primary);">They need help in the moment.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== WHY TOOLS FAIL ===================== -->
+<section class="py-24 px-6" style="background:var(--bg-secondary);">
+  <div class="max-w-4xl mx-auto">
+    <div class="fade-in">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">The gap</p>
+      <h2 class="font-bold leading-tight mb-12" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+        Why calendars, assistants,<br>and chatbots don't help
+      </h2>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4 fade-in mb-12">
+      <!-- Calendars -->
+      <div class="rounded-2xl p-6 card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background:rgba(148,163,184,0.08);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#64748B" stroke-width="1.75"/><line x1="16" y1="2" x2="16" y2="6" stroke="#64748B" stroke-width="1.75" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="#64748B" stroke-width="1.75" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="#64748B" stroke-width="1.75"/></svg>
+        </div>
+        <h3 class="text-sm font-semibold mb-3" style="color:var(--text-primary);">Calendars</h3>
+        <ul class="space-y-2">
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Show events, not impact</li>
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Don't understand energy or recovery</li>
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Never intervene</li>
+        </ul>
+      </div>
+
+      <!-- Chatbots -->
+      <div class="rounded-2xl p-6 card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background:rgba(148,163,184,0.08);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#64748B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="text-sm font-semibold mb-3" style="color:var(--text-primary);">Chatbots / AI assistants</h3>
+        <ul class="space-y-2">
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Wait for you to ask</li>
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Don't know your limits</li>
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Can't take action safely</li>
+        </ul>
+      </div>
+
+      <!-- Wellness -->
+      <div class="rounded-2xl p-6 card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style="background:rgba(148,163,184,0.08);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="#64748B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="text-sm font-semibold mb-3" style="color:var(--text-primary);">Wellness apps</h3>
+        <ul class="space-y-2">
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Require discipline</li>
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Add more dashboards</li>
+          <li class="text-xs flex items-start gap-2" style="color:var(--text-secondary);"><span class="mt-1.5 w-1 h-1 rounded-full shrink-0" style="background:var(--text-muted);"></span>Help you reflect after the damage is done</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="fade-in">
+      <p class="text-lg font-medium" style="color:var(--text-secondary);">
+        None of them own the problem.
+        <span class="text-gradient font-semibold"> This does.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SOLUTION ===================== -->
+<section class="py-24 px-6 relative overflow-hidden">
+  <div class="absolute top-0 right-0 w-96 h-96 pointer-events-none" aria-hidden="true" style="background:radial-gradient(circle,rgba(45,212,191,0.07) 0%,transparent 65%);"></div>
+  <div class="max-w-4xl mx-auto relative z-10">
+    <div class="fade-in">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:#2DD4BF;letter-spacing:0.1em;">The solution</p>
+      <h2 class="font-bold leading-tight mb-8" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+        An AI agent that quietly<br>manages your social load
+      </h2>
+    </div>
+    <div class="fade-in grid lg:grid-cols-[1fr_auto] gap-10 lg:gap-12 items-center">
+      <div class="min-w-0">
+        <p class="text-lg leading-relaxed mb-8" style="color:var(--text-secondary);">
+          The system continuously models your personal tolerance for social activity using patterns from your calendar and behavior. When it detects overload, it checks in through a short audio snippet and can take small, permissioned actions to reduce strain — before burnout sets in.
+        </p>
+        <div class="p-6 rounded-2xl" style="background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.15);">
+          <p class="text-base font-medium" style="color:#2DD4BF;">
+            It acts so you don't have to decide under pressure.
+          </p>
+        </div>
+      </div>
+      <div class="flex justify-center lg:justify-end shrink-0">
+        <img src="guard.png" alt="Quick check-in screen: your evening looks busy, want me to help lighten it?" class="w-full max-w-[260px] lg:max-w-[280px]" style="filter:drop-shadow(0 25px 50px -12px rgba(45,212,191,0.15));" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== HOW IT WORKS ===================== -->
+<section id="how-it-works" class="py-24 px-6" style="background:var(--bg-secondary);">
+  <div class="max-w-4xl mx-auto">
+    <div class="fade-in">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">How it works</p>
+      <h2 class="font-bold leading-tight mb-16" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+        Four quiet steps
+      </h2>
+    </div>
+
+    <div class="space-y-0">
+      <!-- Step 1 -->
+      <div class="grid gap-6 pb-14 fade-in" style="grid-template-columns:72px 1fr;">
+        <div class="flex flex-col items-center">
+          <div class="step-number">01</div>
+          <div class="w-px flex-1 mt-3" style="background:linear-gradient(to bottom,rgba(139,92,246,0.25),transparent);"></div>
+        </div>
+        <div class="pt-1">
+          <h3 class="text-lg font-semibold mb-3" style="color:var(--text-primary);">Continuous Understanding</h3>
+          <ul class="space-y-2">
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Learns your social patterns over time</li>
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Understands obligation vs choice</li>
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Models recovery needs and limits</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="grid gap-6 pb-14 fade-in" style="grid-template-columns:72px 1fr;">
+        <div class="flex flex-col items-center">
+          <div class="step-number">02</div>
+          <div class="w-px flex-1 mt-3" style="background:linear-gradient(to bottom,rgba(139,92,246,0.25),transparent);"></div>
+        </div>
+        <div class="pt-1">
+          <h3 class="text-lg font-semibold mb-3" style="color:var(--text-primary);">Rare, Intentional Check-Ins</h3>
+          <ul class="space-y-2">
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>One notification when risk is high</li>
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>No nagging, no noise</li>
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Tap to hear a 30-second audio explanation</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="grid gap-6 pb-14 fade-in" style="grid-template-columns:72px 1fr;">
+        <div class="flex flex-col items-center">
+          <div class="step-number">03</div>
+          <div class="w-px flex-1 mt-3" style="background:linear-gradient(to bottom,rgba(139,92,246,0.25),transparent);"></div>
+        </div>
+        <div class="pt-1">
+          <h3 class="text-lg font-semibold mb-4" style="color:var(--text-primary);">Conversational Control</h3>
+          <!-- Conversation mockup -->
+          <div class="space-y-2 max-w-xs">
+            <div class="px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm" style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.18);color:#C4B5FD;">
+              "Your Thursday looks heavy. Want me to find something we can move?"
+            </div>
+            <div class="px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm ml-auto text-right" style="background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.1);color:var(--text-secondary);max-width:180px;">
+              "What can we move?"
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="grid gap-6 fade-in" style="grid-template-columns:72px 1fr;">
+        <div>
+          <div class="step-number">04</div>
+        </div>
+        <div class="pt-1">
+          <h3 class="text-lg font-semibold mb-3" style="color:var(--text-primary);">Action Taken</h3>
+          <ul class="space-y-2">
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Reschedules, declines, shortens, or buffers events</li>
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Confirms what it did</li>
+            <li class="text-sm flex items-center gap-2" style="color:var(--text-secondary);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Learns from the outcome</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== AUDIO FIRST ===================== -->
+<section class="py-24 px-6 relative overflow-hidden">
+  <div class="absolute bottom-0 left-0 w-96 h-96 pointer-events-none" aria-hidden="true" style="background:radial-gradient(circle,rgba(139,92,246,0.07) 0%,transparent 65%);"></div>
+  <div class="max-w-4xl mx-auto relative z-10">
+    <div class="grid sm:grid-cols-2 gap-12 lg:gap-20 items-center">
+
+      <!-- Phone mockup -->
+      <div class="fade-in flex justify-center">
+        <div class="relative w-52 h-[22rem] rounded-[2.25rem] flex flex-col items-center justify-center p-5" style="background:var(--bg-card);border:1.5px solid rgba(139,92,246,0.18);box-shadow:0 0 60px rgba(139,92,246,0.08),0 0 0 1px rgba(139,92,246,0.06);">
+          <!-- Notch -->
+          <div class="absolute top-3 left-1/2 -translate-x-1/2 w-16 h-1.5 rounded-full" style="background:rgba(255,255,255,0.06);" aria-hidden="true"></div>
+          <!-- App label -->
+          <p class="absolute top-8 text-xs font-medium" style="color:var(--text-muted);">Guard</p>
+
+          <!-- Notification card -->
+          <div class="w-full rounded-xl p-3 mb-4" style="background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.14);">
+            <p class="text-xs font-semibold mb-0.5" style="color:#A78BFA;">1 check-in</p>
+            <p class="text-xs" style="color:var(--text-secondary);">Your week is getting heavy</p>
+          </div>
+
+          <!-- Audio player -->
+          <div class="flex items-center gap-2 w-full">
+            <button type="button" aria-label="Play audio check-in" class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 cursor-pointer" style="background:rgba(139,92,246,0.18);border:1px solid rgba(139,92,246,0.3);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3l14 9-14 9V3z" fill="#A78BFA"/></svg>
+            </button>
+            <div class="flex items-end gap-0.5 flex-1" style="height:28px;" aria-hidden="true">
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+              <div class="wave-bar" style="background:rgba(139,92,246,0.45);"></div>
+            </div>
+            <span class="text-xs shrink-0" style="color:var(--text-muted);">0:30</span>
+          </div>
+
+          <!-- Confirm action -->
+          <div class="w-full mt-4 px-3 py-2.5 rounded-xl text-xs text-center cursor-pointer btn-primary font-medium text-white">
+            Moved Thursday 1:1 → Friday
+          </div>
+        </div>
+      </div>
+
+      <!-- Copy -->
+      <div class="fade-in">
+        <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">Audio-first</p>
+        <h2 class="font-bold leading-tight mb-6" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+          Why audio,<br>not screens
+        </h2>
+        <ul class="space-y-5 mb-8">
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold" style="color:var(--text-primary);">Lower cognitive load</p>
+              <p class="text-xs mt-0.5" style="color:var(--text-secondary);">Hearing is easier than reading when you're drained.</p>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold" style="color:var(--text-primary);">Works while you move</p>
+              <p class="text-xs mt-0.5" style="color:var(--text-secondary);">Walking, commuting, decompressing — it fits in.</p>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold" style="color:var(--text-primary);">Feels supportive, not managerial</p>
+              <p class="text-xs mt-0.5" style="color:var(--text-secondary);">A quiet voice, not another notification to dismiss.</p>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold" style="color:var(--text-primary);">Decide without opening another app</p>
+              <p class="text-xs mt-0.5" style="color:var(--text-secondary);">One tap. Listen. Respond. Done.</p>
+            </div>
+          </li>
+        </ul>
+        <p class="text-sm italic" style="color:var(--text-muted);">This is guidance, not another task.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== OUTCOMES ===================== -->
+<section class="py-24 px-6" style="background:var(--bg-secondary);">
+  <div class="max-w-4xl mx-auto">
+    <div class="fade-in">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">What changes</p>
+      <h2 class="font-bold leading-tight mb-12" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+        What it can do for you
+      </h2>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-3 mb-12 fade-in">
+      <div class="flex items-center gap-3 px-5 py-4 rounded-xl" style="background:rgba(45,212,191,0.04);border:1px solid rgba(45,212,191,0.1);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="text-sm font-medium" style="color:var(--text-primary);">Prevent social burnout before it happens</p>
+      </div>
+      <div class="flex items-center gap-3 px-5 py-4 rounded-xl" style="background:rgba(45,212,191,0.04);border:1px solid rgba(45,212,191,0.1);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="text-sm font-medium" style="color:var(--text-primary);">Reduce last-minute cancellations</p>
+      </div>
+      <div class="flex items-center gap-3 px-5 py-4 rounded-xl" style="background:rgba(45,212,191,0.04);border:1px solid rgba(45,212,191,0.1);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="text-sm font-medium" style="color:var(--text-primary);">Protect important relationships</p>
+      </div>
+      <div class="flex items-center gap-3 px-5 py-4 rounded-xl" style="background:rgba(45,212,191,0.04);border:1px solid rgba(45,212,191,0.1);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="text-sm font-medium" style="color:var(--text-primary);">Make boundaries easier to set</p>
+      </div>
+      <div class="flex items-center gap-3 px-5 py-4 rounded-xl sm:col-span-2" style="background:rgba(45,212,191,0.04);border:1px solid rgba(45,212,191,0.1);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#2DD4BF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="text-sm font-medium" style="color:var(--text-primary);">Remove guilt from saying no</p>
+      </div>
+    </div>
+    <div class="fade-in">
+      <p class="text-xl font-medium" style="color:var(--text-secondary);">
+        You show up better —<br>
+        <span style="color:var(--text-primary);">because you're not already drained.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TRUST ===================== -->
+<section class="py-24 px-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="grid sm:grid-cols-2 gap-12 lg:gap-20 items-center">
+      <!-- Copy -->
+      <div class="fade-in">
+        <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">Trust &amp; control</p>
+        <h2 class="font-bold leading-tight mb-6" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+          You're always<br>in control
+        </h2>
+        <ul class="space-y-4 mb-8">
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <p class="text-sm" style="color:var(--text-secondary);">Actions are permissioned and reversible</p>
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <p class="text-sm" style="color:var(--text-secondary);">You set hard boundaries — never cancel X, never act on Y</p>
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <p class="text-sm" style="color:var(--text-secondary);">Clear explanation for every action taken</p>
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded flex items-center justify-center shrink-0" style="background:rgba(139,92,246,0.12);">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#A78BFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <p class="text-sm" style="color:var(--text-secondary);">No medical claims, no judgment</p>
+          </li>
+        </ul>
+        <div class="p-4 rounded-xl" style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.14);">
+          <p class="text-sm font-medium" style="color:#A78BFA;">The system is conservative by design.</p>
+        </div>
+      </div>
+
+      <!-- Permission toggles mockup -->
+      <div class="fade-in space-y-3">
+        <div class="p-4 rounded-xl flex items-center justify-between gap-4" style="background:var(--bg-card);border:1px solid var(--border);">
+          <div>
+            <p class="text-sm font-medium" style="color:var(--text-primary);">Can reschedule meetings</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">With 24h notice minimum</p>
+          </div>
+          <div class="w-10 h-6 rounded-full flex items-center px-1 shrink-0" style="background:rgba(45,212,191,0.2);" role="img" aria-label="Enabled">
+            <div class="w-4 h-4 rounded-full ml-auto" style="background:#2DD4BF;"></div>
+          </div>
+        </div>
+        <div class="p-4 rounded-xl flex items-center justify-between gap-4" style="background:var(--bg-card);border:1px solid var(--border);">
+          <div>
+            <p class="text-sm font-medium" style="color:var(--text-primary);">Can decline new invites</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">When overload risk &gt; 80%</p>
+          </div>
+          <div class="w-10 h-6 rounded-full flex items-center px-1 shrink-0" style="background:rgba(45,212,191,0.2);" role="img" aria-label="Enabled">
+            <div class="w-4 h-4 rounded-full ml-auto" style="background:#2DD4BF;"></div>
+          </div>
+        </div>
+        <div class="p-4 rounded-xl flex items-center justify-between gap-4" style="background:var(--bg-card);border:1px solid rgba(239,68,68,0.15);">
+          <div>
+            <p class="text-sm font-medium" style="color:var(--text-primary);">Never cancel family events</p>
+            <p class="text-xs mt-0.5" style="color:var(--text-muted);">Hard boundary — always protected</p>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="text-xs font-medium" style="color:rgba(239,68,68,0.7);">Never</span>
+            <div class="w-10 h-6 rounded-full flex items-center px-1" style="background:rgba(239,68,68,0.1);" role="img" aria-label="Blocked">
+              <div class="w-4 h-4 rounded-full" style="background:rgba(239,68,68,0.5);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== WHO IT'S FOR ===================== -->
+<section class="py-24 px-6" style="background:var(--bg-secondary);">
+  <div class="max-w-4xl mx-auto">
+    <div class="fade-in">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">Who it's for</p>
+      <h2 class="font-bold leading-tight mb-12" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+        Built for people who feel<br>this in their bones
+      </h2>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4 mb-12 fade-in">
+      <div class="p-5 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style="background:rgba(139,92,246,0.1);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#A78BFA" stroke-width="2"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Socially exhausted, not wanting to withdraw</p>
+        <p class="text-xs" style="color:var(--text-secondary);">You want connection — just less of it on heavy weeks.</p>
+      </div>
+      <div class="p-5 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style="background:rgba(139,92,246,0.1);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2" stroke="#A78BFA" stroke-width="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="12" x2="12" y2="16" stroke="#A78BFA" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="14" x2="14" y2="14" stroke="#A78BFA" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Professionals with packed calendars</p>
+        <p class="text-xs" style="color:var(--text-secondary);">Back-to-back commitments with no buffer built in.</p>
+      </div>
+      <div class="p-5 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style="background:rgba(139,92,246,0.1);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Caregivers juggling obligation and energy</p>
+        <p class="text-xs" style="color:var(--text-secondary);">Constantly giving, with nothing left to protect yourself.</p>
+      </div>
+      <div class="p-5 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style="background:rgba(139,92,246,0.1);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#A78BFA" stroke-width="2"/><path d="M12 8v4l3 3" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Tired of managing this alone</p>
+        <p class="text-xs" style="color:var(--text-secondary);">You've tried tracking it yourself. It doesn't stick.</p>
+      </div>
+    </div>
+    <div class="fade-in p-6 rounded-2xl text-center" style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.14);">
+      <p class="text-lg font-medium" style="color:var(--text-primary);">
+        If you've ever thought <span class="text-gradient">"I should have said no earlier"</span> — this is for you.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== DIFFERENTIATION ===================== -->
+<section class="py-24 px-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="fade-in">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--accent-violet-light);letter-spacing:0.1em;">Why it's different</p>
+      <h2 class="font-bold leading-tight mb-12" style="font-size:clamp(1.9rem,4vw,3rem);letter-spacing:-0.02em;color:var(--text-primary);">
+        Why this can't be replaced<br>by ChatGPT
+      </h2>
+    </div>
+    <div class="space-y-3 mb-12 fade-in">
+      <div class="flex items-start gap-4 p-5 rounded-xl card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-0.5 h-12 rounded-full shrink-0 mt-0.5" style="background:linear-gradient(to bottom,#8B5CF6,#2DD4BF);" aria-hidden="true"></div>
+        <div>
+          <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Persistent personal energy model</p>
+          <p class="text-xs" style="color:var(--text-secondary);">Builds a deep understanding of you over weeks and months — not a blank slate every conversation.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-4 p-5 rounded-xl card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-0.5 h-12 rounded-full shrink-0 mt-0.5" style="background:linear-gradient(to bottom,#8B5CF6,#2DD4BF);" aria-hidden="true"></div>
+        <div>
+          <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Continuous monitoring, not prompts</p>
+          <p class="text-xs" style="color:var(--text-secondary);">It watches in the background so you don't have to remember to ask.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-4 p-5 rounded-xl card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-0.5 h-12 rounded-full shrink-0 mt-0.5" style="background:linear-gradient(to bottom,#8B5CF6,#2DD4BF);" aria-hidden="true"></div>
+        <div>
+          <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Autonomous, permissioned actions</p>
+          <p class="text-xs" style="color:var(--text-secondary);">Not suggestions. Real calendar actions — within rules you set.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-4 p-5 rounded-xl card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-0.5 h-12 rounded-full shrink-0 mt-0.5" style="background:linear-gradient(to bottom,#8B5CF6,#2DD4BF);" aria-hidden="true"></div>
+        <div>
+          <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Audio-first interaction</p>
+          <p class="text-xs" style="color:var(--text-secondary);">Designed for low-energy moments — not for when you're at peak focus.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-4 p-5 rounded-xl card-hover cursor-default" style="background:var(--bg-card);border:1px solid var(--border);">
+        <div class="w-0.5 h-12 rounded-full shrink-0 mt-0.5" style="background:linear-gradient(to bottom,#8B5CF6,#2DD4BF);" aria-hidden="true"></div>
+        <div>
+          <p class="text-sm font-semibold mb-1" style="color:var(--text-primary);">Narrow objective: protect your energy</p>
+          <p class="text-xs" style="color:var(--text-secondary);">Not a general assistant. One job, done well.</p>
+        </div>
+      </div>
+    </div>
+    <div class="fade-in">
+      <p class="text-xl font-medium" style="color:var(--text-secondary);">
+        General AI talks.
+        <span class="text-gradient font-semibold"> This one acts.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FINAL CTA ===================== -->
+<section id="early-access" class="py-32 px-6 relative overflow-hidden">
+  <!-- Background rings -->
+  <div class="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden="true">
+    <div style="position:absolute;width:700px;height:700px;border-radius:50%;border:1px solid rgba(139,92,246,0.05);"></div>
+    <div style="position:absolute;width:500px;height:500px;border-radius:50%;border:1px solid rgba(139,92,246,0.08);"></div>
+    <div style="position:absolute;width:300px;height:300px;border-radius:50%;border:1px solid rgba(139,92,246,0.12);"></div>
+    <div style="position:absolute;width:800px;height:800px;background:radial-gradient(ellipse,rgba(139,92,246,0.08) 0%,rgba(45,212,191,0.04) 40%,transparent 65%);"></div>
+  </div>
+
+  <div class="relative z-10 max-w-xl mx-auto text-center fade-in">
+    <h2 class="font-bold leading-tight mb-4" style="font-size:clamp(2rem,5vw,3.25rem);letter-spacing:-0.03em;color:var(--text-primary);">
+      Let the system<br>handle the overload.
+    </h2>
+    <p class="text-lg mb-10" style="color:var(--text-secondary);">
+      Join the early access list. We'll reach out when we're ready for you.
+    </p>
+
+    <!-- Email form -->
+    <form class="flex flex-col sm:flex-row gap-3 mb-5" onsubmit="handleSubmit(event);" novalidate>
+      <label for="email-input" class="sr-only">Email address</label>
+      <input
+        id="email-input"
+        type="email"
+        placeholder="your@email.com"
+        autocomplete="email"
+        required
+        class="flex-1 px-4 py-3.5 rounded-xl text-sm"
+        style="background:rgba(255,255,255,0.04);border:1px solid rgba(148,163,184,0.15);color:var(--text-primary);"
+      />
+      <button
+        type="submit"
+        id="submit-btn"
+        class="btn-primary px-5 py-3.5 rounded-xl text-sm font-semibold text-white cursor-pointer whitespace-nowrap"
+      >
+        Request early access
+      </button>
+    </form>
+    <p id="success-msg" class="hidden text-sm mb-5" style="color:#2DD4BF;">You're on the list. We'll be in touch.</p>
+
+    <p class="text-xs" style="color:var(--text-muted);">
+      Private. Conservative. Built to stay out of your way.
+    </p>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="py-8 px-6" style="border-top:1px solid var(--border);">
+  <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <div class="w-5 h-5 rounded-md flex items-center justify-center" style="background:linear-gradient(135deg,#7C3AED,#2DD4BF);" aria-hidden="true">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="white"/></svg>
+      </div>
+      <span class="text-sm font-medium" style="color:var(--text-muted);">Guard</span>
+    </div>
+    <p class="text-xs text-center" style="color:var(--text-muted);">
+      Early access &nbsp;·&nbsp; Private by design &nbsp;·&nbsp; No medical claims
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Scroll fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Reduced motion: skip animations
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
+  }
+
+  // Form handling
+  function handleSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById('email-input').value;
+    if (!email || !email.includes('@')) return;
+    const btn = document.getElementById('submit-btn');
+    const msg = document.getElementById('success-msg');
+    btn.closest('form').style.display = 'none';
+    msg.classList.remove('hidden');
+  }
+</script>
+</body>
+</html>
